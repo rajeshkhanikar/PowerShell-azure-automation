@@ -1,7 +1,7 @@
 <#
 
 .AUTHOR Rajesh Khanikar 
-.VERSION 1.0 (21-AUG-2024)
+.VERSION 1.1 (02-SEP-2024)
 
 #>
 
@@ -72,7 +72,7 @@
 
 
 
-function Write-VerboseLog {
+function fn_Write_VerboseLog {
     param (
         [Parameter(Mandatory=$true)]
         [string]$Message,
@@ -117,56 +117,56 @@ $logFileName = "log-add-hybridext.txt"
 $logFilePath = Join-Path -Path (Get-Location) -ChildPath $logFileName
 Set-Content -Path $logFilePath -Value ""  # This clears the log file content at the start
 
-function Check-PreRequisites {
-    # Function to check if the script is running with administrator privileges
-    function Is-Administrator {
+function fn_Test_PreRequisites {
+    # Function to test if the script is running with administrator privileges
+    function fn_Is_Administrator {
         $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
         $currentPrincipal = New-Object Security.Principal.WindowsPrincipal($currentIdentity)
         return $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     }
 
-    # Check if the script is running as an administrator
-    if (-not (Is-Administrator)) {
+    # Test if the script is running as an administrator
+    if (-not (fn_Is_Administrator)) {
         Write-Host "ERROR: The script must be run as an administrator. Please restart PowerShell with 'Run as Administrator' and try again." -ForegroundColor Red
-        Write-VerboseLog -Message "Script not running with administrator privileges. Exiting." -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Script not running with administrator privileges. Exiting." -LogType "ERROR"
         Exit 1
     } else {
-        Write-VerboseLog -Message "Script is running with administrator privileges." -LogType "INFO"
+        fn_Write_VerboseLog -Message "Script is running with administrator privileges." -LogType "INFO"
     }
 
     # Check the current execution policy
     $currentExecutionPolicy = Get-ExecutionPolicy
     if ($currentExecutionPolicy -ne 'RemoteSigned') {
-        Write-VerboseLog -Message "Current execution policy is '$currentExecutionPolicy'. Attempting to set it to 'RemoteSigned'." -LogType "WARNING"
+        fn_Write_VerboseLog -Message "Current execution policy is '$currentExecutionPolicy'. Attempting to set it to 'RemoteSigned'." -LogType "WARNING"
 
         try {
             Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
-            Write-VerboseLog -Message "Execution policy successfully set to 'RemoteSigned'." -LogType "INFO"
+            fn_Write_VerboseLog -Message "Execution policy successfully set to 'RemoteSigned'." -LogType "INFO"
         }
         catch {
             Write-Host "ERROR: Failed to set execution policy to 'RemoteSigned'. Please set it manually and rerun the script." -ForegroundColor Red
-            Write-VerboseLog -Message "Failed to set execution policy. Error: $($_.Exception.Message)" -LogType "ERROR"
+            fn_Write_VerboseLog -Message "Failed to set execution policy. Error: $($_.Exception.Message)" -LogType "ERROR"
             Exit 1
         }
     } else {
-        Write-VerboseLog -Message "Execution policy is already set to 'RemoteSigned'." -LogType "INFO"
+        fn_Write_VerboseLog -Message "Execution policy is already set to 'RemoteSigned'." -LogType "INFO"
     }
 }
 
-# Call the Check-PreRequisites function at the start of your script
-Check-PreRequisites
+# Call the fn_Test_PreRequisites function at the start of your script
+fn_Test_PreRequisites
 
-function Check-AzureArcAgent {
+function fn_Test_AzureArcAgent {
     # Path to the agent configuration file
     $agentConfigPath = Join-Path -Path $env:PROGRAMDATA -ChildPath "AzureConnectedMachineAgent\Config\agentconfig.json"
 
     # Check if the agentconfig.json file exists
     if (-not (Test-Path -Path $agentConfigPath)) {
-        Write-VerboseLog -Message "The file '$agentConfigPath' does not exist." -LogType "ERROR"
+        fn_Write_VerboseLog -Message "The file '$agentConfigPath' does not exist." -LogType "ERROR"
         Write-Host "ERROR: The required file '$agentConfigPath' does not exist. This script requires the machine to be connected using Azure Arc." -ForegroundColor Red
         Exit 1
     } else {
-        Write-VerboseLog -Message "The file '$agentConfigPath' was found." -LogType "INFO"
+        fn_Write_VerboseLog -Message "The file '$agentConfigPath' was found." -LogType "INFO"
     }
 
     # Check if the himds service exists
@@ -175,26 +175,26 @@ function Check-AzureArcAgent {
     $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
 
     if ($null -eq $service) {
-        Write-VerboseLog -Message "The service '$serviceDisplayName' ($serviceName) is not found on this system. The machine may not be properly connected via Azure Arc." -LogType "ERROR"
+        fn_Write_VerboseLog -Message "The service '$serviceDisplayName' ($serviceName) is not found on this system. The machine may not be properly connected via Azure Arc." -LogType "ERROR"
         Write-Host "ERROR: The service '$serviceDisplayName' ($serviceName) is not found on this system. Please ensure the machine is connected using Azure Arc." -ForegroundColor Red
         Exit 1
     }
 
     # Check if the himds service is running
     if ($service.Status -ne 'Running') {
-        Write-VerboseLog -Message "The service '$serviceDisplayName' ($serviceName) exists but is not running. Current status: $($service.Status)" -LogType "ERROR"
+        fn_Write_VerboseLog -Message "The service '$serviceDisplayName' ($serviceName) exists but is not running. Current status: $($service.Status)" -LogType "ERROR"
         Write-Host "ERROR: The service '$serviceDisplayName' ($serviceName) is not running. Please ensure the service is started before running this script." -ForegroundColor Red
         Exit 1
     } else {
-        Write-VerboseLog -Message "The service '$serviceDisplayName' ($serviceName) is running." -LogType "INFO"
+        fn_Write_VerboseLog -Message "The service '$serviceDisplayName' ($serviceName) is running." -LogType "INFO"
     }
 }
 
-# Call the Check-AzureArcAgent function at the appropriate place in your script
-Check-AzureArcAgent
+# Call the fn_Test_AzureArcAgent function at the appropriate place in your script
+fn_Test_AzureArcAgent
 
 # Function to read and parse the agentconfig.json file
-function Read-AgentConfig {
+function fn_Read_AgentConfig {
     param (
         [string]$configFilePath
     )
@@ -202,10 +202,10 @@ function Read-AgentConfig {
     # Read the JSON content from the agentconfig.json file
     try {
         $jsonContent = Get-Content -Path $configFilePath -Raw | ConvertFrom-Json
-        Write-VerboseLog -Message "Successfully read and parsed the agentconfig.json file." -LogType "INFO"
+        fn_Write_VerboseLog -Message "Successfully read and parsed the agentconfig.json file." -LogType "INFO"
     }
     catch {
-        Write-VerboseLog -Message "Failed to read or parse the agentconfig.json file. Error: $($_.Exception.Message)" -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Failed to read or parse the agentconfig.json file. Error: $($_.Exception.Message)" -LogType "ERROR"
         Write-Host "ERROR: Unable to read or parse the agentconfig.json file. Please check the file and try again." -ForegroundColor Red
         Exit 1
     }
@@ -227,20 +227,20 @@ function Read-AgentConfig {
     $global:ArmEndpoint = $jsonContent.armendpoint
 
     # Log and display the retrieved values
-    Write-VerboseLog -Message "SubscriptionId: $SubscriptionId" -LogType "INFO"
-    Write-VerboseLog -Message "ResourceGroup: $ResourceGroup" -LogType "INFO"
-    Write-VerboseLog -Message "ResourceName: $ResourceName" -LogType "INFO"
-    Write-VerboseLog -Message "TenantId: $TenantId" -LogType "INFO"
-    Write-VerboseLog -Message "Location: $Location" -LogType "INFO"
-    Write-VerboseLog -Message "VmId: $VmId" -LogType "INFO"
-    Write-VerboseLog -Message "VmUuid: $VmUuid" -LogType "INFO"
-    Write-VerboseLog -Message "CertificateThumbprint: $CertificateThumbprint" -LogType "INFO"
-    Write-VerboseLog -Message "ClientId: $ClientId" -LogType "INFO"
-    Write-VerboseLog -Message "Cloud: $Cloud" -LogType "INFO"
-    Write-VerboseLog -Message "PrivateLinkScope: $PrivateLinkScope" -LogType "INFO"
-    Write-VerboseLog -Message "Namespace: $Namespace" -LogType "INFO"
-    Write-VerboseLog -Message "CorrelationId: $CorrelationId" -LogType "INFO"
-    Write-VerboseLog -Message "ArmEndpoint: $ArmEndpoint" -LogType "INFO"
+    fn_Write_VerboseLog -Message "SubscriptionId: $SubscriptionId" -LogType "INFO"
+    fn_Write_VerboseLog -Message "ResourceGroup: $ResourceGroup" -LogType "INFO"
+    fn_Write_VerboseLog -Message "ResourceName: $ResourceName" -LogType "INFO"
+    fn_Write_VerboseLog -Message "TenantId: $TenantId" -LogType "INFO"
+    fn_Write_VerboseLog -Message "Location: $Location" -LogType "INFO"
+    fn_Write_VerboseLog -Message "VmId: $VmId" -LogType "INFO"
+    fn_Write_VerboseLog -Message "VmUuid: $VmUuid" -LogType "INFO"
+    fn_Write_VerboseLog -Message "CertificateThumbprint: $CertificateThumbprint" -LogType "INFO"
+    fn_Write_VerboseLog -Message "ClientId: $ClientId" -LogType "INFO"
+    fn_Write_VerboseLog -Message "Cloud: $Cloud" -LogType "INFO"
+    fn_Write_VerboseLog -Message "PrivateLinkScope: $PrivateLinkScope" -LogType "INFO"
+    fn_Write_VerboseLog -Message "Namespace: $Namespace" -LogType "INFO"
+    fn_Write_VerboseLog -Message "CorrelationId: $CorrelationId" -LogType "INFO"
+    fn_Write_VerboseLog -Message "ArmEndpoint: $ArmEndpoint" -LogType "INFO"
 
     Write-Host "The following configuration was retrieved from the agentconfig.json file:" -ForegroundColor Green
     Write-Host "SubscriptionId: $SubscriptionId"
@@ -261,19 +261,19 @@ function Read-AgentConfig {
     # Prompt the user to continue
     $userResponse = Read-Host "Do you want to continue? This script will attempt to add Azure Automation Windows Hybrid Worker to this machine. (yes/no)"
     if ($userResponse -notin @("yes", "y")) {
-        Write-VerboseLog -Message "User chose not to continue with the script." -LogType "INFO"
+        fn_Write_VerboseLog -Message "User chose not to continue with the script." -LogType "INFO"
         Write-Host "Operation canceled by user." -ForegroundColor Yellow
         Exit 0
     }
-    Write-VerboseLog -Message "User chose to continue with the script." -LogType "INFO"
+    fn_Write_VerboseLog -Message "User chose to continue with the script." -LogType "INFO"
 }
 
-# Call the Read-AgentConfig function with the path to the agentconfig.json file
+# Call the fn_Read_AgentConfig function with the path to the agentconfig.json file
 $agentConfigPath = Join-Path -Path $env:PROGRAMDATA -ChildPath "AzureConnectedMachineAgent\Config\agentconfig.json"
-Read-AgentConfig -configFilePath $agentConfigPath
+fn_Read_AgentConfig -configFilePath $agentConfigPath
 
 
-function Check-RequiredModules {
+function fn_Test_RequiredModules {
     # List of required modules
     $requiredModules = @("Az.Accounts", "Az.Resources")
 
@@ -282,84 +282,93 @@ function Check-RequiredModules {
         $moduleInstalled = Get-Module -ListAvailable -Name $module -ErrorAction SilentlyContinue
 
         if (-not $moduleInstalled) {
-            Write-VerboseLog -Message "The required module '$module' is not installed. Attempting to install..." -LogType "WARNING"
+            fn_Write_VerboseLog -Message "The required module '$module' is not installed. Attempting to install..." -LogType "WARNING"
             Write-Host "The required module '$module' is not installed. Attempting to install..." -ForegroundColor Yellow
 
             try {
                 # Install the module for all users
                 Install-Module -Name $module -Force -Scope AllUsers -AllowClobber -ErrorAction Stop
-                Write-VerboseLog -Message "Successfully installed the module '$module'." -LogType "INFO"
+                fn_Write_VerboseLog -Message "Successfully installed the module '$module'." -LogType "INFO"
             }
             catch {
-                Write-VerboseLog -Message "Failed to install the module '$module'. Error: $($_.Exception.Message)" -LogType "ERROR"
+                fn_Write_VerboseLog -Message "Failed to install the module '$module'. Error: $($_.Exception.Message)" -LogType "ERROR"
                 Write-Host "ERROR: Failed to install the module '$module'. Please ensure you have the necessary permissions and internet access." -ForegroundColor Red
                 Exit 1
             }
         } else {
-            Write-VerboseLog -Message "The module '$module' is already installed." -LogType "INFO"
+            fn_Write_VerboseLog -Message "The module '$module' is already installed." -LogType "INFO"
         }
     }
 
     # Ensure that the 'Az.Resources' module contains 'Get-AzRoleAssignment'
     if (-not (Get-Command -Name "Get-AzRoleAssignment" -Module "Az.Resources" -ErrorAction SilentlyContinue)) {
-        Write-VerboseLog -Message "The 'Az.Resources' module is installed but does not contain the 'Get-AzRoleAssignment' command. Attempting to update..." -LogType "WARNING"
+        fn_Write_VerboseLog -Message "The 'Az.Resources' module is installed but does not contain the 'Get-AzRoleAssignment' command. Attempting to update..." -LogType "WARNING"
         Write-Host "The 'Az.Resources' module is installed but does not contain the 'Get-AzRoleAssignment' command. Attempting to update..." -ForegroundColor Yellow
 
         try {
             # Update the Az.Resources module to the latest version for all users
             Install-Module -Name "Az.Resources" -Force -Scope AllUsers -AllowClobber -ErrorAction Stop
-            Write-VerboseLog -Message "Successfully updated the 'Az.Resources' module." -LogType "INFO"
+            fn_Write_VerboseLog -Message "Successfully updated the 'Az.Resources' module." -LogType "INFO"
         }
         catch {
-            Write-VerboseLog -Message "Failed to update the 'Az.Resources' module. Error: $($_.Exception.Message)" -LogType "ERROR"
+            fn_Write_VerboseLog -Message "Failed to update the 'Az.Resources' module. Error: $($_.Exception.Message)" -LogType "ERROR"
             Write-Host "ERROR: Failed to update the 'Az.Resources' module. Please ensure you have the necessary permissions and internet access." -ForegroundColor Red
             Exit 1
         }
     } else {
-        Write-VerboseLog -Message "The 'Get-AzRoleAssignment' command is available." -LogType "INFO"
+        fn_Write_VerboseLog -Message "The 'Get-AzRoleAssignment' command is available." -LogType "INFO"
     }
 }
 
-# Call the Check-RequiredModules function at the start of your script
-Check-RequiredModules
+# Call the fn_Test_RequiredModules function at the start of your script
+fn_Test_RequiredModules
 
 
-function Authenticate-ToAzure {
-    Write-VerboseLog -Message "Authenticating to Azure using device code..." -LogType "INFO"
+function fn_Authenticate_ToAzure {
+    fn_Write_VerboseLog -Message "Authenticating to Azure using device code..." -LogType "INFO"
 
-    # Check if there is an existing Azure session context
-    if (-not (Get-AzContext)) {
-        Connect-AzAccount -DeviceCode
-    }
+    try {
+        # Perform explicit device code authentication regardless of existing context
+        Connect-AzAccount -UseDeviceAuthentication
+        fn_Write_VerboseLog -Message "Device Code authentication succeeded." -LogType "INFO"
 
-    # Get the UPN (User Principal Name) of the signed-in user
-    $currentContext = Get-AzContext
-    $global:UserUPN = $currentContext.Account.Id
+        # Get the UPN (User Principal Name) of the signed-in user
+        $currentContext = Get-AzContext
+        $global:UserUPN = $currentContext.Account.Id
 
-    # Log the UPN of the signed-in user
-    Write-VerboseLog -Message "Signed in as user: $global:UserUPN" -LogType "INFO"
-    
-    # Get the access token and convert it to a plain string (handling both current and future versions)
-    $secureToken = (Get-AzAccessToken -AsSecureString).Token
-    $global:token = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken))
+        # Log the UPN of the signed-in user
+        fn_Write_VerboseLog -Message "Signed in as user: $global:UserUPN" -LogType "INFO"
 
-    # Verify if the token was successfully obtained
-    if (-not $global:token) {
-        Write-VerboseLog -Message "Failed to obtain the Azure access token." -LogType "ERROR"
-        Write-Host "ERROR: Failed to obtain the Azure access token. Please check your authentication and try again." -ForegroundColor Red
+        # Attempt to get the access token (no need to convert it, just store the plain string)
+        try {
+            $global:token = (Get-AzAccessToken).Token
+
+            if ($null -eq $global:token) {
+                throw "Token retrieval returned null"
+            }
+
+            fn_Write_VerboseLog -Message "Successfully obtained Azure access token." -LogType "INFO"
+        } catch {
+            fn_Write_VerboseLog -Message "Failed during token retrieval: $_" -LogType "ERROR"
+            Write-Host "ERROR: An error occurred while retrieving the Azure access token. Please check your authentication and try again." -ForegroundColor Red
+            Exit 1
+        }
+
+    } catch {
+        fn_Write_VerboseLog -Message "Failed to authenticate to Azure: $_" -LogType "ERROR"
+        Write-Host "ERROR: Failed to authenticate to Azure using device code. Please check your network connection and authentication settings." -ForegroundColor Red
         Exit 1
-    } else {
-        Write-VerboseLog -Message "Successfully obtained Azure access token." -LogType "INFO"
     }
 }
 
 
-function Check-UserRole {
+
+function fn_Test_UserRole {
     # Get the ResourceGroup from the previously read config
     $resourceGroup = $global:ResourceGroup
     $subscriptionId = $global:SubscriptionId
 
-    Write-VerboseLog -Message "Checking if the signed-in user ($global:UserUPN) has 'Owner' role on resource group: $resourceGroup." -LogType "INFO"
+    fn_Write_VerboseLog -Message "Checking if the signed-in user ($global:UserUPN) has 'Owner' role on resource group: $resourceGroup." -LogType "INFO"
 
     # Define the scope to the resource group
     $scope = "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup"
@@ -369,7 +378,7 @@ function Check-UserRole {
         $roleAssignments = Get-AzRoleAssignment -Scope $scope -ErrorAction Stop
     }
     catch {
-        Write-VerboseLog -Message "Failed to retrieve role assignments for resource group: $resourceGroup. Error: $($_.Exception.Message)" -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Failed to retrieve role assignments for resource group: $resourceGroup. Error: $($_.Exception.Message)" -LogType "ERROR"
         Write-Host "ERROR: Unable to retrieve role assignments for the resource group '$resourceGroup'. Ensure you have the correct permissions." -ForegroundColor Red
         Exit 1
     }
@@ -378,34 +387,34 @@ function Check-UserRole {
     $isOwner = $roleAssignments | Where-Object { $_.RoleDefinitionName -eq "Owner" }
 
     if (-not $isOwner) {
-        Write-VerboseLog -Message "The signed-in user ($global:UserUPN) does not have the 'Owner' role on the resource group: $resourceGroup." -LogType "ERROR"
+        fn_Write_VerboseLog -Message "The signed-in user ($global:UserUPN) does not have the 'Owner' role on the resource group: $resourceGroup." -LogType "ERROR"
         Write-Host "ERROR: The signed-in user ($global:UserUPN) does not have the 'Owner' role on the resource group '$resourceGroup'. Please use an account with the 'Owner' role and rerun the script." -ForegroundColor Red
         Exit 1
     } else {
-        Write-VerboseLog -Message "The signed-in user ($global:UserUPN) has the 'Owner' role on the resource group: $resourceGroup." -LogType "INFO"
+        fn_Write_VerboseLog -Message "The signed-in user ($global:UserUPN) has the 'Owner' role on the resource group: $resourceGroup." -LogType "INFO"
     }
 }
 
 # Call the functions in the appropriate order
-Authenticate-ToAzure
-Check-UserRole
+fn_Authenticate_ToAzure
+fn_Test_UserRole
 
 # Function to Get the Automation Account Name
-function Get-AutomationAccountName {
-    Write-VerboseLog -Message "Attempting to retrieve automation account name from the resource group: $global:ResourceGroup..." -LogType "INFO"
+function fn_Get_AutomationAccountName {
+    fn_Write_VerboseLog -Message "Attempting to retrieve automation account name from the resource group: $global:ResourceGroup..." -LogType "INFO"
 
     try {
         # Retrieve automation account(s) in the specified resource group
         $automationAccounts = Get-AzAutomationAccount -ResourceGroupName $global:ResourceGroup -ErrorAction Stop
-        Write-VerboseLog -Message "Raw output of Get-AzAutomationAccount: $(ConvertTo-Json $automationAccounts -Depth 3)" -LogType "INFO"
+        fn_Write_VerboseLog -Message "Raw output of Get-AzAutomationAccount: $(ConvertTo-Json $automationAccounts -Depth 3)" -LogType "INFO"
 
         if ($automationAccounts.Count -eq 1) {
             # If there is only one automation account, select it and extract the name
             $global:automationAccountName = $automationAccounts.AutomationAccountName
-            Write-VerboseLog -Message "Automation account '$global:automationAccountName' found." -LogType "INFO"
+            fn_Write_VerboseLog -Message "Automation account '$global:automationAccountName' found." -LogType "INFO"
         } elseif ($automationAccounts.Count -gt 1) {
             # If multiple automation accounts are found, prompt the user to choose one
-            Write-VerboseLog -Message "Multiple automation accounts found in the resource group." -LogType "INFO"
+            fn_Write_VerboseLog -Message "Multiple automation accounts found in the resource group." -LogType "INFO"
             Write-Host "Multiple automation accounts found in the resource group. Please choose one from the list below:" -ForegroundColor Yellow
 
             # Display the list of automation accounts
@@ -417,65 +426,65 @@ function Get-AutomationAccountName {
             # Validate the user's input
             if ($automationAccounts.AutomationAccountName -contains $userInput) {
                 $global:automationAccountName = $userInput
-                Write-VerboseLog -Message "User selected automation account '$global:automationAccountName'." -LogType "INFO"
+                fn_Write_VerboseLog -Message "User selected automation account '$global:automationAccountName'." -LogType "INFO"
             } else {
-                Write-VerboseLog -Message "User input '$userInput' does not match any of the available automation accounts." -LogType "ERROR"
+                fn_Write_VerboseLog -Message "User input '$userInput' does not match any of the available automation accounts." -LogType "ERROR"
                 Write-Host "ERROR: The specified automation account name does not match any of the available accounts. Exiting script." -ForegroundColor Red
                 Exit 1
             }
         } else {
-            Write-VerboseLog -Message "No automation accounts found in the resource group." -LogType "ERROR"
+            fn_Write_VerboseLog -Message "No automation accounts found in the resource group." -LogType "ERROR"
             Write-Host "ERROR: No automation accounts found in the resource group. Please ensure the correct resource group is being used." -ForegroundColor Red
             Exit 1
         }
     } catch {
-        Write-VerboseLog -Message "Failed to retrieve automation account name. Error Details: $_" -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Failed to retrieve automation account name. Error Details: $_" -LogType "ERROR"
         Write-Host "ERROR: Unable to retrieve automation account name. Please check the log for details." -ForegroundColor Red
         Exit 1
     }
 
     # Validate that the automation account name is not empty
     if (-not $global:automationAccountName) {
-        Write-VerboseLog -Message "Automation account name is empty or not set. Stopping the script." -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Automation account name is empty or not set. Stopping the script." -LogType "ERROR"
         Write-Host "ERROR: Automation account name is empty or not set. Please check the resource group and try again." -ForegroundColor Red
         Exit 1
     }
 }
 
 # Function to Create the Hybrid Worker Group
-function Create-HybridWorkerGroup {
+function fn_Create_HybridWorkerGroup {
     $headers = @{ Authorization = "Bearer $global:token" }
     
     # Ensure this variable is correctly populated
     $hybridRunbookWorkerGroupName = $env:COMPUTERNAME  # Using uppercase for environment variable
 
-    Write-VerboseLog -Message "HybridWorker Group Name: $hybridRunbookWorkerGroupName" -LogType "INFO"
+    fn_Write_VerboseLog -Message "HybridWorker Group Name: $hybridRunbookWorkerGroupName" -LogType "INFO"
 
     if (-not $hybridRunbookWorkerGroupName) {
-        Write-VerboseLog -Message "Hybrid Worker Group Name is empty or not set. Stopping the script." -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Hybrid Worker Group Name is empty or not set. Stopping the script." -LogType "ERROR"
         Write-Host "ERROR: Hybrid Worker Group Name is empty or not set. Please check the script." -ForegroundColor Red
         Exit 1
     }
 
     # Check if the Hybrid Worker Group already exists
     $checkHRWGroupUri = "https://management.azure.com/subscriptions/$($global:SubscriptionId)/resourceGroups/$($global:ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($global:automationAccountName)/hybridRunbookWorkerGroups/$($hybridRunbookWorkerGroupName)?api-version=2023-11-01"
-    Write-VerboseLog -Message "Checking if Hybrid Worker Group exists. Request URI: $checkHRWGroupUri" -LogType "INFO"
+    fn_Write_VerboseLog -Message "Checking if Hybrid Worker Group exists. Request URI: $checkHRWGroupUri" -LogType "INFO"
 
     try {
         $existingGroup = Invoke-RestMethod -Uri $checkHRWGroupUri -Method GET -Headers $headers -ErrorAction Stop
         if ($existingGroup) {
-            Write-VerboseLog -Message "Hybrid Worker Group '$hybridRunbookWorkerGroupName' already exists. Skipping creation." -LogType "INFO"
+            fn_Write_VerboseLog -Message "Hybrid Worker Group '$hybridRunbookWorkerGroupName' already exists. Skipping creation." -LogType "INFO"
             Write-Host "INFO: Hybrid Worker Group '$hybridRunbookWorkerGroupName' already exists. Skipping creation." -ForegroundColor Yellow
             return
         }
     } catch {
-        Write-VerboseLog -Message "Hybrid Worker Group does not exist. Proceeding with creation." -LogType "INFO"
+        fn_Write_VerboseLog -Message "Hybrid Worker Group does not exist. Proceeding with creation." -LogType "INFO"
     }
 
     # Create Hybrid Worker Group
-    Write-VerboseLog -Message "Creating Hybrid Worker Group..." -LogType "INFO"
+    fn_Write_VerboseLog -Message "Creating Hybrid Worker Group..." -LogType "INFO"
     $createHRWGroupUri = "https://management.azure.com/subscriptions/$($global:SubscriptionId)/resourceGroups/$($global:ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($global:automationAccountName)/hybridRunbookWorkerGroups/$($hybridRunbookWorkerGroupName)?api-version=2023-11-01"
-    Write-VerboseLog -Message "Request URI: $createHRWGroupUri" -LogType "INFO"
+    fn_Write_VerboseLog -Message "Request URI: $createHRWGroupUri" -LogType "INFO"
 
     try {
         $body = @{
@@ -484,12 +493,12 @@ function Create-HybridWorkerGroup {
             }
         } | ConvertTo-Json
 
-        Write-VerboseLog -Message "Request Body: $body" -LogType "INFO" # Log the body for diagnostics
+        fn_Write_VerboseLog -Message "Request Body: $body" -LogType "INFO" # Log the body for diagnostics
 
         $response = Invoke-RestMethod -Uri $createHRWGroupUri -Method PUT -Headers $headers -Body $body -ContentType "application/json" -ErrorAction Stop
-        Write-VerboseLog -Message "Hybrid Worker Group Created Successfully." -LogType "INFO"
+        fn_Write_VerboseLog -Message "Hybrid Worker Group Created Successfully." -LogType "INFO"
     } catch {
-        Write-VerboseLog -Message "Failed to create Hybrid Worker Group. Error Details: $_" -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Failed to create Hybrid Worker Group. Error Details: $_" -LogType "ERROR"
         Write-Host "ERROR: Failed to create Hybrid Worker Group. Please check the log for details." -ForegroundColor Red
 
         # Log more diagnostic information
@@ -497,21 +506,21 @@ function Create-HybridWorkerGroup {
             $errorResponse = $_.Exception.Response.GetResponseStream()
             $reader = New-Object System.IO.StreamReader($errorResponse)
             $responseBody = $reader.ReadToEnd()
-            Write-VerboseLog -Message "API Error Response: $responseBody" -LogType "ERROR"
+            fn_Write_VerboseLog -Message "API Error Response: $responseBody" -LogType "ERROR"
         }
         Exit 1
     }
 }
 
 # Function to Create the Hybrid Worker
-function Create-HybridWorker {
+function fn_Create_HybridWorker {
     $headers = @{ Authorization = "Bearer $global:token" }
     
     # Ensure this variable is correctly populated
     $hybridRunbookWorkerGroupName = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } else { "DefaultHybridWorkerGroup" }
 
     if (-not $hybridRunbookWorkerGroupName) {
-        Write-VerboseLog -Message "Hybrid Runbook Worker Group Name is empty or not set. Stopping the script." -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Hybrid Runbook Worker Group Name is empty or not set. Stopping the script." -LogType "ERROR"
         Write-Host "ERROR: Hybrid Runbook Worker Group Name is empty or not set. Please check the script." -ForegroundColor Red
         Exit 1
     }
@@ -520,25 +529,25 @@ function Create-HybridWorker {
 
     # Check if the Hybrid Worker already exists
     $listHRWUri = "https://management.azure.com/subscriptions/$global:SubscriptionId/resourceGroups/$global:ResourceGroup/providers/Microsoft.Automation/automationAccounts/$global:automationAccountName/hybridRunbookWorkerGroups/$hybridRunbookWorkerGroupName/hybridRunbookWorkers?api-version=2023-11-01"
-    Write-VerboseLog -Message "Checking if Hybrid Workers already exist. Request URI: $listHRWUri" -LogType "INFO"
+    fn_Write_VerboseLog -Message "Checking if Hybrid Workers already exist. Request URI: $listHRWUri" -LogType "INFO"
 
     try {
         $existingWorkers = Invoke-RestMethod -Uri $listHRWUri -Method GET -Headers $headers -ErrorAction Stop
         foreach ($worker in $existingWorkers.value) {
             if ($worker.properties.vmResourceId -eq $ARCServerResourceId) {
-                Write-VerboseLog -Message "Hybrid Worker with the same AzureResourceId already exists in Group '$hybridRunbookWorkerGroupName'. Skipping creation." -LogType "INFO"
+                fn_Write_VerboseLog -Message "Hybrid Worker with the same AzureResourceId already exists in Group '$hybridRunbookWorkerGroupName'. Skipping creation." -LogType "INFO"
                 Write-Host "INFO: Hybrid Worker with the same AzureResourceId already exists in Group '$hybridRunbookWorkerGroupName'. Skipping creation." -ForegroundColor Yellow
                 return
             }
         }
     } catch {
-        Write-VerboseLog -Message "Failed to retrieve existing Hybrid Workers. Proceeding with creation if it does not already exist." -LogType "INFO"
+        fn_Write_VerboseLog -Message "Failed to retrieve existing Hybrid Workers. Proceeding with creation if it does not already exist." -LogType "INFO"
     }
 
     # Proceed to create the Hybrid Worker if it doesn't already exist
     $hrwId = [guid]::NewGuid().ToString()
     $createHRWUri = "https://management.azure.com/subscriptions/$global:SubscriptionId/resourceGroups/$global:ResourceGroup/providers/Microsoft.Automation/automationAccounts/$global:automationAccountName/hybridRunbookWorkerGroups/$hybridRunbookWorkerGroupName/hybridRunbookWorkers/$($hrwId)?api-version=2023-11-01"
-    Write-VerboseLog -Message "Request URI: $createHRWUri" -LogType "INFO"
+    fn_Write_VerboseLog -Message "Request URI: $createHRWUri" -LogType "INFO"
 
     $body = @{
         properties = @{
@@ -548,56 +557,56 @@ function Create-HybridWorker {
 
     try {
         $response = Invoke-RestMethod -Uri $createHRWUri -Method PUT -Headers $headers -Body $body -ContentType "application/json" -ErrorAction Stop
-        Write-VerboseLog -Message "Hybrid Worker Created Successfully." -LogType "INFO"
+        fn_Write_VerboseLog -Message "Hybrid Worker Created Successfully." -LogType "INFO"
     } catch {
-        Write-VerboseLog -Message "Failed to create Hybrid Worker. Error Details: $_" -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Failed to create Hybrid Worker. Error Details: $_" -LogType "ERROR"
         Write-Host "ERROR: Failed to create Hybrid Worker. Please check the log for details." -ForegroundColor Red
         Exit 1
     }
 }
 
 # Function to Add the Azure Automation Windows Hybrid Worker Extension to Arc Machine
-function Add-ARCExtension {
+function fn_Add_ARCExtension {
     $headers = @{ Authorization = "Bearer $global:token" }
     $extensionName = "HybridWorkerExtension"
     $checkExtensionUri = "https://management.azure.com/subscriptions/$global:SubscriptionId/resourceGroups/$global:ResourceGroup/providers/Microsoft.HybridCompute/machines/$global:ResourceName/extensions/$($extensionName)?api-version=2022-11-10"
     
-    Write-VerboseLog -Message "Checking if the Azure Automation Windows Hybrid Worker Extension is already added. Request URI: $checkExtensionUri" -LogType "INFO"
+    fn_Write_VerboseLog -Message "Checking if the Azure Automation Windows Hybrid Worker Extension is already added. Request URI: $checkExtensionUri" -LogType "INFO"
 
     try {
         # Check if the extension is already added
         $existingExtension = Invoke-RestMethod -Uri $checkExtensionUri -Method GET -Headers $headers -ErrorAction Stop
         if ($existingExtension) {
-            Write-VerboseLog -Message "The Azure Automation Windows Hybrid Worker Extension is already added to this machine. Skipping extension addition." -LogType "INFO"
+            fn_Write_VerboseLog -Message "The Azure Automation Windows Hybrid Worker Extension is already added to this machine. Skipping extension addition." -LogType "INFO"
             Write-Host "INFO: The Azure Automation Windows Hybrid Worker Extension is already added to this machine. Skipping extension addition." -ForegroundColor Yellow
             return
         }
     } catch {
         # If the extension is not found, proceed with adding it
         if ($_.Exception.Response.StatusCode -eq 404) {
-            Write-VerboseLog -Message "The Azure Automation Windows Hybrid Worker Extension is not found. Proceeding to add the extension." -LogType "INFO"
+            fn_Write_VerboseLog -Message "The Azure Automation Windows Hybrid Worker Extension is not found. Proceeding to add the extension." -LogType "INFO"
         } else {
-            Write-VerboseLog -Message "Failed to check for existing extension. Error Details: $_" -LogType "ERROR"
+            fn_Write_VerboseLog -Message "Failed to check for existing extension. Error Details: $_" -LogType "ERROR"
             Write-Host "ERROR: Unable to check for existing extension. Please check the log for details." -ForegroundColor Red
             Exit 1
         }
     }
 
     # Retrieve Automation Hybrid Service URL
-    Write-VerboseLog -Message "Retrieving Automation Account Hybrid Service URL..." -LogType "INFO"
+    fn_Write_VerboseLog -Message "Retrieving Automation Account Hybrid Service URL..." -LogType "INFO"
     $automationAccountInfoUri = "https://management.azure.com/subscriptions/$global:SubscriptionId/resourceGroups/$global:ResourceGroup/providers/Microsoft.Automation/automationAccounts/$($global:automationAccountName)?api-version=2023-11-01"
     try {
         $automationHybridServiceUrl = (Invoke-RestMethod -Uri $automationAccountInfoUri -Method GET -Headers $headers -ErrorAction Stop).properties.automationHybridServiceUrl
-        Write-VerboseLog -Message "Automation Account Hybrid Service URL: $automationHybridServiceUrl" -LogType "INFO"
+        fn_Write_VerboseLog -Message "Automation Account Hybrid Service URL: $automationHybridServiceUrl" -LogType "INFO"
     } catch {
-        Write-VerboseLog -Message "Failed to retrieve Automation Account Hybrid Service URL: $_" -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Failed to retrieve Automation Account Hybrid Service URL: $_" -LogType "ERROR"
         Write-Host "ERROR: Unable to retrieve Automation Account Hybrid Service URL. Please check the log for details." -ForegroundColor Red
         Exit 1
     }
 
     # Create the extension only if it's not already added
     $createARCExtensionUri = "https://management.azure.com/subscriptions/$global:SubscriptionId/resourceGroups/$global:ResourceGroup/providers/Microsoft.HybridCompute/machines/$global:ResourceName/extensions/$($extensionName)?api-version=2022-11-10"
-    Write-VerboseLog -Message "Request URI: $createARCExtensionUri" -LogType "INFO"
+    fn_Write_VerboseLog -Message "Request URI: $createARCExtensionUri" -LogType "INFO"
 
     $createARCExtensionBody = @{
         location   = $global:Location
@@ -615,9 +624,9 @@ function Add-ARCExtension {
 
     try {
         $response = Invoke-RestMethod -Uri $createARCExtensionUri -Method PUT -Headers $headers -Body $createARCExtensionBody -ContentType "application/json" -ErrorAction Stop
-        Write-VerboseLog -Message "Azure Automation Windows Hybrid Worker Extension added successfully." -LogType "INFO"
+        fn_Write_VerboseLog -Message "Azure Automation Windows Hybrid Worker Extension added successfully." -LogType "INFO"
     } catch {
-        Write-VerboseLog -Message "Failed to add the extension. Error Details: $_" -LogType "ERROR"
+        fn_Write_VerboseLog -Message "Failed to add the extension. Error Details: $_" -LogType "ERROR"
         Write-Host "ERROR: Failed to add the Azure Automation Windows Hybrid Worker Extension. Please check the log for details." -ForegroundColor Red
 
         # Log more diagnostic information
@@ -625,7 +634,7 @@ function Add-ARCExtension {
             $errorResponse = $_.Exception.Response.GetResponseStream()
             $reader = New-Object System.IO.StreamReader($errorResponse)
             $responseBody = $reader.ReadToEnd()
-            Write-VerboseLog -Message "API Error Response: $responseBody" -LogType "ERROR"
+            fn_Write_VerboseLog -Message "API Error Response: $responseBody" -LogType "ERROR"
         }
         Exit 1
     }
@@ -634,7 +643,7 @@ function Add-ARCExtension {
 
 # Main Script Execution
 # Call functions in sequence
-Get-AutomationAccountName
-Create-HybridWorkerGroup
-Create-HybridWorker
-Add-ARCExtension
+fn_Get_AutomationAccountName
+fn_Create_HybridWorkerGroup
+fn_Create_HybridWorker
+fn_Add_ARCExtension
